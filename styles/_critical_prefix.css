@@ -1,0 +1,15 @@
+/* Travamento de largura para popup */
+html, body {
+  width: 400px !important;
+  min-width: 400px !important;
+  max-width: 400px !important;
+  height: auto !important;
+  overflow-x: hidden !important;
+}
+.container {
+  width: 400px !important;
+  min-width: 400px !important;
+  max-width: 400px !important;
+}
+
+/* Restante do CSS existente */
