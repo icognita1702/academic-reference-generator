@@ -5,12 +5,12 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('[ARG] Instalada');
 });
 
-// Verifica se a aba é elegível para scripting (bloqueia chrome://, edge://, etc.)
+// Verifica se a aba é elegível para scripting (bloqueia chrome://, edge://, comet://, etc.)
 function isEligibleTab(tab) {
   try {
     if (!tab?.url) return false;
     const u = new URL(tab.url);
-    const blocked = ['chrome:', 'edge:', 'about:', 'moz-extension:', 'chrome-extension:'];
+    const blocked = ['chrome:', 'edge:', 'about:', 'moz-extension:', 'chrome-extension:', 'comet:'];
     return !blocked.includes(u.protocol);
   } catch {
     return false;
