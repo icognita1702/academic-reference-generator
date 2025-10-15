@@ -382,6 +382,7 @@ section:last-child {
 .result-actions {
     display: flex;
     gap: 4px;
+    flex-wrap: wrap;
 }
 
 .action-btn {
@@ -391,12 +392,17 @@ section:last-child {
     border-radius: 4px;
     color: #38a169;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .action-btn:hover {
     background: #b2f5ea;
+}
+
+.action-btn i {
+    margin-right: 2px;
 }
 
 .reference-output {
@@ -406,8 +412,22 @@ section:last-child {
     line-height: 1.6;
     color: #2d3748;
     background: white;
-    border-radius: 0 0 8px 8px;
     word-wrap: break-word;
+}
+
+.export-info {
+    padding: 8px 16px;
+    background: #f0f9ff;
+    border-top: 1px solid #bae6fd;
+    font-size: 11px;
+    color: #0369a1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.export-info i {
+    color: #0284c7;
 }
 
 .copy-notification {
@@ -554,5 +574,14 @@ section:last-child {
     
     .form-group.half {
         flex: 1;
+    }
+    
+    .result-actions {
+        flex-wrap: wrap;
+    }
+    
+    .action-btn {
+        font-size: 10px;
+        padding: 4px 6px;
     }
 }
