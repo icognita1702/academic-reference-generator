@@ -34,96 +34,125 @@ async function getPageMetadataSafe() {
   try {
     const resp = await chrome.runtime.sendMessage({ type: 'GET_PAGE_METADATA_SAFE' });
     return resp || { ok: false };
-  } catch {
+  } catch (e) {
+    console.error('Error getting page metadata:', e);
     return { ok: false };
   }
 }
 
-async function generateReference() {
-  const loadingEl = q('#loadingIndicator');
-  const referenceOutputEl = q('#referenceOutput');
-  const copyBtnEl = q('#copyBtn');
-  const errorEl = q('#errorMessage');
-
-  if (loadingEl) loadingEl.style.display = 'block';
-  if (errorEl) errorEl.textContent = '';
-  if (referenceOutputEl) referenceOutputEl.innerHTML = '';
-  if (copyBtnEl) copyBtnEl.style.display = 'none';
+// OPTIMIZATION: Load and display page title immediately on popup open
+async function loadPageTitleFast() {
+  const pageTitleEl = q('#pageTitle');
+  if (!pageTitleEl) return;
 
   try {
-    const res = await getPageMetadataSafe();
-    if (!res.ok) {
-      throw new Error(res.error || 'Não foi possível capturar os metadados da página.');
+    // Step 1: Try to get title from active tab immediately (fastest)
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.title) {
+      pageTitleEl.textContent = tab.title;
+      pageTitleEl.style.fontStyle = 'normal';
     }
 
-    let meta = res.metadata;
-    let enriched = meta;
-    if (enricher && meta.doi) {
-      enriched = await enricher.enrichFromCrossRef(meta.doi);
-    } else if (enricher && meta.isbn) {
-      enriched = await enricher.enrichFromOpenLibrary(meta.isbn);
-    }
-
-    const fmt = getActiveFormatKey();
-    let reference = '';
-    
-    if (formatter) {
-      if (fmt === 'ABNT') reference = formatter.formatABNT(enriched);
-      else if (fmt === 'APA') reference = formatter.formatAPA(enriched);
-      else if (fmt === 'MLA') reference = formatter.formatMLA(enriched);
-      else if (fmt === 'Chicago') reference = formatter.formatChicago(enriched);
-      else if (fmt === 'Vancouver') reference = formatter.formatVancouver(enriched);
-      else reference = formatter.formatABNT(enriched);
-    } else {
-      reference = `${enriched.title || 'Sem título'}. ${enriched.url || ''}`;
-    }
-
-    // CORREÇÃO PRINCIPAL: usar innerHTML para preservar formatação e exibir referência formatada
-    if (referenceOutputEl) {
-      referenceOutputEl.innerHTML = reference;
-      referenceOutputEl.style.display = 'block';
-    }
-
-    // CORREÇÃO: sempre mostrar o botão de cópia quando houver referência
-    if (copyBtnEl) {
-      copyBtnEl.style.display = 'inline-flex';
-      copyBtnEl.disabled = false;
-    }
-
-    // Salvar no histórico com referência completa
-    saveToHistory({
-      format: fmt,
-      reference: reference,
-      text: referenceOutputEl ? referenceOutputEl.innerText : reference.replace(/<[^>]*>/g, ''),
-      metadata: enriched,
-      timestamp: new Date().toISOString()
+    // Step 2: Try to get more complete metadata in background (async, non-blocking)
+    getPageMetadataSafe().then(metadata => {
+      if (metadata.ok && metadata.data && metadata.data.title) {
+        // Update with enriched title if available and different
+        if (metadata.data.title !== tab.title) {
+          pageTitleEl.textContent = metadata.data.title;
+        }
+      }
+    }).catch(err => {
+      console.warn('Background metadata fetch failed:', err);
+      // Keep the fast title already displayed
     });
 
-  } catch (err) {
-    if (errorEl) errorEl.textContent = err.message || 'Erro desconhecido';
-    console.error('Error generating reference:', err);
-  } finally {
-    if (loadingEl) loadingEl.style.display = 'none';
+  } catch (error) {
+    console.error('Error loading page title:', error);
+    // Fallback: keep "Carregando..." or set to safe default
+    if (pageTitleEl.textContent === 'Carregando...') {
+      pageTitleEl.textContent = 'Título não disponível';
+      pageTitleEl.style.fontStyle = 'italic';
+    }
   }
 }
 
-function saveToHistory(entry) {
-  chrome.storage.local.get(['referenceHistory'], (result) => {
+async function generateReference() {
+  const outputDiv = q('#referenceOutput');
+  const copyBtn = q('#copyBtn');
+  const formatKey = getActiveFormatKey();
+
+  if (!outputDiv) return;
+
+  outputDiv.textContent = 'Gerando referência...';
+  outputDiv.style.display = 'block';
+  if (copyBtn) copyBtn.style.display = 'none';
+
+  const metadata = await getPageMetadataSafe();
+
+  if (!metadata.ok || !metadata.data) {
+    outputDiv.textContent = 'Erro: Não foi possível obter os dados da página.';
+    return;
+  }
+
+  let data = metadata.data;
+  if (enricher && metadata.needsEnrichment) {
+    try {
+      data = await enricher.enrich(data);
+    } catch (err) {
+      console.warn('Enrichment failed, using basic metadata:', err);
+    }
+  }
+
+  if (!formatter) {
+    outputDiv.textContent = 'Erro: Formatador não disponível.';
+    return;
+  }
+
+  let reference = '';
+  try {
+    switch (formatKey) {
+      case 'ABNT':
+        reference = formatter.formatABNT(data);
+        break;
+      case 'APA':
+        reference = formatter.formatAPA(data);
+        break;
+      case 'Chicago':
+        reference = formatter.formatChicago(data);
+        break;
+      case 'MLA':
+        reference = formatter.formatMLA(data);
+        break;
+      case 'Vancouver':
+        reference = formatter.formatVancouver(data);
+        break;
+      default:
+        reference = formatter.formatABNT(data);
+    }
+  } catch (err) {
+    console.error('Formatting error:', err);
+    outputDiv.textContent = 'Erro ao formatar a referência.';
+    return;
+  }
+
+  outputDiv.textContent = reference;
+  if (copyBtn) copyBtn.style.display = 'inline-block';
+
+  chrome.storage.local.get({ referenceHistory: [] }, (result) => {
     const history = result.referenceHistory || [];
-    history.unshift(entry);
+    history.unshift({ reference, format: formatKey, timestamp: Date.now() });
     if (history.length > 50) history.pop();
-    chrome.storage.local.set({ referenceHistory: history });
+    chrome.storage.local.set({ referenceHistory: history }, () => {
+      loadHistory();
+    });
   });
 }
 
 function copyToClipboard() {
-  const referenceOutputEl = q('#referenceOutput');
-  if (!referenceOutputEl) return;
-  
-  // CORREÇÃO: copiar o texto completo (sem formatação HTML) para a área de transferência
-  const textToCopy = referenceOutputEl.innerText || referenceOutputEl.textContent;
-  
-  navigator.clipboard.writeText(textToCopy).then(() => {
+  const outputDiv = q('#referenceOutput');
+  if (!outputDiv || !outputDiv.textContent) return;
+
+  navigator.clipboard.writeText(outputDiv.textContent).then(() => {
     const copyBtn = q('#copyBtn');
     if (copyBtn) {
       const originalText = copyBtn.textContent;
@@ -135,57 +164,54 @@ function copyToClipboard() {
       }, 2000);
     }
   }).catch(err => {
-    console.error('Erro ao copiar:', err);
-    alert('Não foi possível copiar. Tente selecionar e copiar manualmente.');
+    console.error('Copy failed:', err);
+    alert('Erro ao copiar para a área de transferência.');
   });
 }
 
 function loadHistory() {
-  chrome.storage.local.get(['referenceHistory'], (result) => {
+  chrome.storage.local.get({ referenceHistory: [] }, (result) => {
     const history = result.referenceHistory || [];
-    const historyList = q('#historyList');
-    if (!historyList) return;
+    const historyDiv = q('#historyList');
+    if (!historyDiv) return;
 
-    historyList.innerHTML = '';
     if (history.length === 0) {
-      historyList.innerHTML = '<p class="empty-history">Nenhuma referência gerada ainda.</p>';
+      historyDiv.innerHTML = '<p style="color: #666; font-style: italic;">Nenhuma referência gerada ainda.</p>';
       return;
     }
 
-    history.forEach((entry, index) => {
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      
-      // CORREÇÃO: exibir referência completa no histórico
-      item.innerHTML = `
-        <div class="history-header">
-          <span class="history-format">${entry.format || 'ABNT'}</span>
-          <span class="history-timestamp">${new Date(entry.timestamp).toLocaleString('pt-BR')}</span>
-        </div>
-        <div class="history-reference">${entry.reference || entry.text || 'Sem referência'}</div>
-        <button class="history-copy-btn" data-index="${index}">📋 Copiar</button>
-      `;
-      
-      historyList.appendChild(item);
-    });
+    historyDiv.innerHTML = '';
+    history.slice(0, 10).forEach((item, idx) => {
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'history-entry';
 
-    // Adicionar event listeners para os botões de copiar do histórico
-    qa('.history-copy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const index = parseInt(btn.dataset.index);
-        const entry = history[index];
-        if (entry) {
-          const textToCopy = entry.text || entry.reference.replace(/<[^>]*>/g, '');
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            btn.textContent = '✓ Copiado!';
-            btn.style.backgroundColor = '#4CAF50';
-            setTimeout(() => {
-              btn.textContent = '📋 Copiar';
-              btn.style.backgroundColor = '';
-            }, 2000);
-          });
-        }
+      const refText = document.createElement('div');
+      refText.className = 'history-reference';
+      refText.textContent = item.reference;
+
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'history-meta';
+      const date = new Date(item.timestamp);
+      metaDiv.textContent = `${item.format} - ${formatAccessDate(date)}`;
+
+      const copyHistBtn = document.createElement('button');
+      copyHistBtn.className = 'history-copy-btn';
+      copyHistBtn.textContent = '📋 Copiar';
+      copyHistBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(item.reference).then(() => {
+          copyHistBtn.textContent = '✓ Copiado!';
+          copyHistBtn.style.backgroundColor = '#4CAF50';
+          setTimeout(() => {
+            copyHistBtn.textContent = '📋 Copiar';
+            copyHistBtn.style.backgroundColor = '';
+          }, 2000);
+        });
       });
+
+      entryDiv.appendChild(refText);
+      entryDiv.appendChild(metaDiv);
+      entryDiv.appendChild(copyHistBtn);
+      historyDiv.appendChild(entryDiv);
     });
   });
 }
@@ -208,11 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (generateBtn) {
     generateBtn.addEventListener('click', generateReference);
   }
-
   if (copyBtn) {
     copyBtn.addEventListener('click', copyToClipboard);
   }
-
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener('click', clearHistory);
   }
@@ -222,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setActiveFormat(btn);
     });
   });
+
+  // OPTIMIZATION: Load page title immediately when popup opens
+  loadPageTitleFast();
 
   // Load history on popup open
   loadHistory();
