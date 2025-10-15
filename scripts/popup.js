@@ -40,216 +40,319 @@ async function getPageMetadataSafe() {
   }
 }
 
-// OPTIMIZATION: Load and display page title immediately on popup open
-async function loadPageTitleFast() {
-  const pageTitleEl = q('#pageTitle');
-  if (!pageTitleEl) return;
-
+async function enrichMetadata(raw) {
+  if (!enricher || !raw.ok) return raw;
   try {
-    // Step 1: Try to get title from active tab immediately (fastest)
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.title) {
-      pageTitleEl.textContent = tab.title;
-      pageTitleEl.style.fontStyle = 'normal';
-    }
-
-    // Step 2: Try to get more complete metadata in background (async, non-blocking)
-    getPageMetadataSafe().then(metadata => {
-      if (metadata.ok && metadata.data && metadata.data.title) {
-        // Update with enriched title if available and different
-        if (metadata.data.title !== tab.title) {
-          pageTitleEl.textContent = metadata.data.title;
-        }
-      }
-    }).catch(err => {
-      console.warn('Background metadata fetch failed:', err);
-      // Keep the fast title already displayed
-    });
-
-  } catch (error) {
-    console.error('Error loading page title:', error);
-    // Fallback: keep "Carregando..." or set to safe default
-    if (pageTitleEl.textContent === 'Carregando...') {
-      pageTitleEl.textContent = 'Título não disponível';
-      pageTitleEl.style.fontStyle = 'italic';
-    }
+    const enriched = await enricher.enrichFromAPIs(raw.metadata);
+    return { ok: true, metadata: enriched };
+  } catch (e) {
+    console.error('Enrichment failed:', e);
+    return raw;
   }
+}
+
+function formatReference(metadata, formatKey) {
+  if (!formatter) return 'Formatter not loaded';
+  try {
+    return formatter.format(metadata, formatKey);
+  } catch (e) {
+    console.error('Format error:', e);
+    return 'Format error: ' + e.message;
+  }
+}
+
+function displayReference(text) {
+  const output = q('#referenceOutput');
+  if (output) {
+    output.textContent = text;
+    output.style.display = 'block';
+  }
+}
+
+function showMessage(text, type = 'info') {
+  const msg = q('#message');
+  if (msg) {
+    msg.textContent = text;
+    msg.className = `message ${type}`;
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }
+}
+
+function showLoading(show) {
+  const loading = q('#loading');
+  if (loading) loading.style.display = show ? 'block' : 'none';
 }
 
 async function generateReference() {
-  const outputDiv = q('#referenceOutput');
-  const copyBtn = q('#copyBtn');
+  showLoading(true);
+  showMessage('Generating reference...', 'info');
+  
+  const raw = await getPageMetadataSafe();
+  if (!raw.ok) {
+    showMessage('Could not extract page metadata', 'error');
+    showLoading(false);
+    return;
+  }
+  
+  const enriched = await enrichMetadata(raw);
   const formatKey = getActiveFormatKey();
-
-  if (!outputDiv) return;
-
-  outputDiv.textContent = 'Gerando referência...';
-  outputDiv.style.display = 'block';
-  if (copyBtn) copyBtn.style.display = 'none';
-
-  const metadata = await getPageMetadataSafe();
-
-  if (!metadata.ok || !metadata.data) {
-    outputDiv.textContent = 'Erro: Não foi possível obter os dados da página.';
-    return;
-  }
-
-  let data = metadata.data;
-  if (enricher && metadata.needsEnrichment) {
-    try {
-      data = await enricher.enrich(data);
-    } catch (err) {
-      console.warn('Enrichment failed, using basic metadata:', err);
-    }
-  }
-
-  if (!formatter) {
-    outputDiv.textContent = 'Erro: Formatador não disponível.';
-    return;
-  }
-
-  let reference = '';
-  try {
-    switch (formatKey) {
-      case 'ABNT':
-        reference = formatter.formatABNT(data);
-        break;
-      case 'APA':
-        reference = formatter.formatAPA(data);
-        break;
-      case 'Chicago':
-        reference = formatter.formatChicago(data);
-        break;
-      case 'MLA':
-        reference = formatter.formatMLA(data);
-        break;
-      case 'Vancouver':
-        reference = formatter.formatVancouver(data);
-        break;
-      default:
-        reference = formatter.formatABNT(data);
-    }
-  } catch (err) {
-    console.error('Formatting error:', err);
-    outputDiv.textContent = 'Erro ao formatar a referência.';
-    return;
-  }
-
-  outputDiv.textContent = reference;
-  if (copyBtn) copyBtn.style.display = 'inline-block';
-
-  chrome.storage.local.get({ referenceHistory: [] }, (result) => {
-    const history = result.referenceHistory || [];
-    history.unshift({ reference, format: formatKey, timestamp: Date.now() });
-    if (history.length > 50) history.pop();
-    chrome.storage.local.set({ referenceHistory: history }, () => {
-      loadHistory();
-    });
-  });
+  const refText = formatReference(enriched.metadata, formatKey);
+  
+  displayReference(refText);
+  saveToHistory(enriched.metadata, refText, formatKey);
+  
+  showMessage('Reference generated successfully!', 'success');
+  showLoading(false);
+  
+  // Show action buttons
+  const actions = q('#actions');
+  if (actions) actions.style.display = 'block';
 }
 
-function copyToClipboard() {
-  const outputDiv = q('#referenceOutput');
-  if (!outputDiv || !outputDiv.textContent) return;
+function saveToHistory(metadata, refText, formatKey) {
+  try {
+    chrome.storage.local.get(['history'], (result) => {
+      const history = result.history || [];
+      history.unshift({
+        metadata,
+        refText,
+        formatKey,
+        timestamp: new Date().toISOString()
+      });
+      // Keep only last 50 entries
+      if (history.length > 50) history.splice(50);
+      chrome.storage.local.set({ history });
+    });
+  } catch (e) {
+    console.error('Error saving to history:', e);
+  }
+}
 
-  navigator.clipboard.writeText(outputDiv.textContent).then(() => {
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
     const copyBtn = q('#copyBtn');
-    if (copyBtn) {
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = '✓ Copiado!';
-      copyBtn.style.backgroundColor = '#4CAF50';
-      setTimeout(() => {
-        copyBtn.textContent = originalText;
-        copyBtn.style.backgroundColor = '';
-      }, 2000);
-    }
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = '✓ Copied!';
+    copyBtn.classList.add('success');
+    showMessage('Reference copied to clipboard!', 'success');
+    setTimeout(() => {
+      copyBtn.textContent = originalText;
+      copyBtn.classList.remove('success');
+    }, 2000);
   }).catch(err => {
     console.error('Copy failed:', err);
-    alert('Erro ao copiar para a área de transferência.');
+    showMessage('Failed to copy to clipboard', 'error');
   });
 }
 
-function loadHistory() {
-  chrome.storage.local.get({ referenceHistory: [] }, (result) => {
-    const history = result.referenceHistory || [];
-    const historyDiv = q('#historyList');
-    if (!historyDiv) return;
+function downloadTXT(text) {
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reference_${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  const downloadBtn = q('#downloadBtn');
+  const originalText = downloadBtn.textContent;
+  downloadBtn.textContent = '✓ Downloaded!';
+  downloadBtn.classList.add('success');
+  showMessage('Reference downloaded as TXT!', 'success');
+  setTimeout(() => {
+    downloadBtn.textContent = originalText;
+    downloadBtn.classList.remove('success');
+  }, 2000);
+}
 
-    if (history.length === 0) {
-      historyDiv.innerHTML = '<p style="color: #666; font-style: italic;">Nenhuma referência gerada ainda.</p>';
-      return;
-    }
+function exportBibTeX(metadata) {
+  if (!formatter) {
+    showMessage('Formatter not available', 'error');
+    return;
+  }
+  
+  const bibTeX = formatter.toBibTeX(metadata);
+  const blob = new Blob([bibTeX], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reference_${Date.now()}.bib`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  const exportBtn = q('#exportBibTeXBtn');
+  const originalText = exportBtn.textContent;
+  exportBtn.textContent = '✓ Exported!';
+  exportBtn.classList.add('success');
+  showMessage('Exported as BibTeX!', 'success');
+  setTimeout(() => {
+    exportBtn.textContent = originalText;
+    exportBtn.classList.remove('success');
+  }, 2000);
+}
 
-    historyDiv.innerHTML = '';
-    history.slice(0, 10).forEach((item, idx) => {
-      const entryDiv = document.createElement('div');
-      entryDiv.className = 'history-entry';
-
-      const refText = document.createElement('div');
-      refText.className = 'history-reference';
-      refText.textContent = item.reference;
-
-      const metaDiv = document.createElement('div');
-      metaDiv.className = 'history-meta';
-      const date = new Date(item.timestamp);
-      metaDiv.textContent = `${item.format} - ${formatAccessDate(date)}`;
-
-      const copyHistBtn = document.createElement('button');
-      copyHistBtn.className = 'history-copy-btn';
-      copyHistBtn.textContent = '📋 Copiar';
-      copyHistBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(item.reference).then(() => {
-          copyHistBtn.textContent = '✓ Copiado!';
-          copyHistBtn.style.backgroundColor = '#4CAF50';
-          setTimeout(() => {
-            copyHistBtn.textContent = '📋 Copiar';
-            copyHistBtn.style.backgroundColor = '';
-          }, 2000);
-        });
-      });
-
-      entryDiv.appendChild(refText);
-      entryDiv.appendChild(metaDiv);
-      entryDiv.appendChild(copyHistBtn);
-      historyDiv.appendChild(entryDiv);
-    });
-  });
+function exportRIS(metadata) {
+  if (!formatter) {
+    showMessage('Formatter not available', 'error');
+    return;
+  }
+  
+  const ris = formatter.toRIS(metadata);
+  const blob = new Blob([ris], { type: 'application/x-research-info-systems' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reference_${Date.now()}.ris`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  const exportBtn = q('#exportRISBtn');
+  const originalText = exportBtn.textContent;
+  exportBtn.textContent = '✓ Exported!';
+  exportBtn.classList.add('success');
+  showMessage('Exported as RIS!', 'success');
+  setTimeout(() => {
+    exportBtn.textContent = originalText;
+    exportBtn.classList.remove('success');
+  }, 2000);
 }
 
 function clearHistory() {
-  if (confirm('Tem certeza que deseja limpar todo o histórico?')) {
-    chrome.storage.local.set({ referenceHistory: [] }, () => {
-      loadHistory();
+  if (confirm('Are you sure you want to clear all history?')) {
+    chrome.storage.local.set({ history: [] }, () => {
+      const clearBtn = q('#clearHistoryBtn');
+      const originalText = clearBtn.textContent;
+      clearBtn.textContent = '✓ Cleared!';
+      clearBtn.classList.add('success');
+      showMessage('History cleared!', 'success');
+      setTimeout(() => {
+        clearBtn.textContent = originalText;
+        clearBtn.classList.remove('success');
+      }, 2000);
     });
   }
 }
 
-// Initialize on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-  const generateBtn = q('#generateBtn');
-  const copyBtn = q('#copyBtn');
-  const clearHistoryBtn = q('#clearHistoryBtn');
-  const formatBtns = qa('.format-btn');
+function toggleManualEntry() {
+  const manualSection = q('#manualSection');
+  const autoSection = q('#autoSection');
+  const toggleBtn = q('#toggleManual');
+  
+  if (manualSection && autoSection) {
+    const isManualHidden = manualSection.style.display === 'none' || !manualSection.style.display;
+    
+    if (isManualHidden) {
+      manualSection.style.display = 'block';
+      autoSection.style.display = 'none';
+      toggleBtn.textContent = '← Back to Auto';
+    } else {
+      manualSection.style.display = 'none';
+      autoSection.style.display = 'block';
+      toggleBtn.textContent = 'Manual Entry →';
+    }
+  }
+}
 
+let currentMetadata = null;
+
+// Initialize event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Format buttons
+  qa('.format-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setActiveFormat(btn);
+      // Regenerate if we have metadata
+      if (currentMetadata) {
+        const formatKey = getActiveFormatKey();
+        const refText = formatReference(currentMetadata, formatKey);
+        displayReference(refText);
+        showMessage(`Format changed to ${formatKey}`, 'info');
+      }
+    });
+  });
+  
+  // Generate button
+  const generateBtn = q('#generateBtn');
   if (generateBtn) {
-    generateBtn.addEventListener('click', generateReference);
+    generateBtn.addEventListener('click', async () => {
+      await generateReference();
+      // Store current metadata for format switching
+      const raw = await getPageMetadataSafe();
+      if (raw.ok) {
+        const enriched = await enrichMetadata(raw);
+        currentMetadata = enriched.metadata;
+      }
+    });
   }
+  
+  // Copy button
+  const copyBtn = q('#copyBtn');
   if (copyBtn) {
-    copyBtn.addEventListener('click', copyToClipboard);
+    copyBtn.addEventListener('click', () => {
+      const output = q('#referenceOutput');
+      if (output && output.textContent) {
+        copyToClipboard(output.textContent);
+      } else {
+        showMessage('No reference to copy', 'error');
+      }
+    });
   }
+  
+  // Download button
+  const downloadBtn = q('#downloadBtn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      const output = q('#referenceOutput');
+      if (output && output.textContent) {
+        downloadTXT(output.textContent);
+      } else {
+        showMessage('No reference to download', 'error');
+      }
+    });
+  }
+  
+  // Export BibTeX button
+  const exportBibTeXBtn = q('#exportBibTeXBtn');
+  if (exportBibTeXBtn) {
+    exportBibTeXBtn.addEventListener('click', () => {
+      if (currentMetadata) {
+        exportBibTeX(currentMetadata);
+      } else {
+        showMessage('Generate a reference first', 'error');
+      }
+    });
+  }
+  
+  // Export RIS button
+  const exportRISBtn = q('#exportRISBtn');
+  if (exportRISBtn) {
+    exportRISBtn.addEventListener('click', () => {
+      if (currentMetadata) {
+        exportRIS(currentMetadata);
+      } else {
+        showMessage('Generate a reference first', 'error');
+      }
+    });
+  }
+  
+  // Clear history button
+  const clearHistoryBtn = q('#clearHistoryBtn');
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener('click', clearHistory);
   }
-
-  formatBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      setActiveFormat(btn);
-    });
-  });
-
-  // OPTIMIZATION: Load page title immediately when popup opens
-  loadPageTitleFast();
-
-  // Load history on popup open
-  loadHistory();
+  
+  // Toggle manual entry button
+  const toggleManualBtn = q('#toggleManual');
+  if (toggleManualBtn) {
+    toggleManualBtn.addEventListener('click', toggleManualEntry);
+  }
+  
+  // Initialize: set first format as active if none is active
+  if (!q('.format-btn.active')) {
+    const firstBtn = q('.format-btn');
+    if (firstBtn) setActiveFormat(firstBtn);
+  }
+  
+  console.log('Popup initialized with all button listeners connected');
 });
