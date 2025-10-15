@@ -1,27 +1,38 @@
-/* Reset e base */
+/* Reset e base para Chrome Extension Popup */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
+html, body {
+    width: 400px;
+    height: auto;
+    max-height: 600px;
+    margin: 0;
+    padding: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
     color: #2d3748;
     font-size: 14px;
     line-height: 1.5;
+    overflow-x: hidden;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: auto;
 }
 
 .container {
     width: 400px;
     max-height: 600px;
+    min-height: 400px;
     overflow-y: auto;
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     margin: 0;
+    position: relative;
 }
 
 /* Scrollbar personalizada */
@@ -46,7 +57,7 @@ body {
 .header {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     color: white;
-    padding: 24px 20px 20px;
+    padding: 20px 20px 16px;
     text-align: center;
     border-radius: 12px 12px 0 0;
 }
@@ -56,29 +67,29 @@ body {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .header-icon {
-    font-size: 24px;
+    font-size: 22px;
     opacity: 0.9;
 }
 
 .header h1 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     margin: 0;
 }
 
 .subtitle {
     opacity: 0.9;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
 }
 
 /* Seções */
 section {
-    padding: 20px;
+    padding: 16px 20px;
     border-bottom: 1px solid #e2e8f0;
 }
 
@@ -91,14 +102,14 @@ section:last-child {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 16px;
+    padding: 14px;
 }
 
 .info-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: #4a5568;
     font-weight: 500;
     font-size: 13px;
@@ -109,12 +120,13 @@ section:last-child {
 }
 
 .page-details {
-    space-y: 8px;
+    space-y: 6px;
 }
 
 .detail-item {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     font-size: 12px;
+    line-height: 1.4;
 }
 
 .detail-item:last-child {
@@ -125,7 +137,7 @@ section:last-child {
     color: #2d3748;
     font-weight: 500;
     display: inline-block;
-    width: 60px;
+    width: 55px;
 }
 
 .page-title, .page-url {
@@ -139,18 +151,18 @@ section:last-child {
 
 /* Toggle de entrada manual */
 .input-toggle {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .toggle-btn {
     width: 100%;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: #edf2f7;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     color: #4a5568;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -181,8 +193,8 @@ section:last-child {
 
 .form-row {
     display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .form-row:last-child {
@@ -194,15 +206,15 @@ section:last-child {
 }
 
 .form-group.half {
-    flex: 0 0 calc(50% - 6px);
+    flex: 0 0 calc(50% - 5px);
 }
 
 .form-group label {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 6px;
-    font-size: 12px;
+    margin-bottom: 4px;
+    font-size: 11px;
     font-weight: 500;
     color: #4a5568;
 }
@@ -214,17 +226,17 @@ section:last-child {
 
 .form-group input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     transition: border-color 0.2s ease;
 }
 
 .form-group input:focus {
     outline: none;
     border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 .form-group input::placeholder {
@@ -236,7 +248,7 @@ section:last-child {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     font-weight: 500;
     font-size: 13px;
     color: #4a5568;
@@ -253,7 +265,7 @@ section:last-child {
 }
 
 .format-btn {
-    padding: 12px 8px;
+    padding: 10px 6px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -279,20 +291,20 @@ section:last-child {
 
 .format-btn i {
     display: block;
-    font-size: 18px;
-    margin-bottom: 6px;
+    font-size: 16px;
+    margin-bottom: 4px;
 }
 
 .format-btn span {
     display: block;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     margin-bottom: 2px;
 }
 
 .format-btn small {
     display: block;
-    font-size: 10px;
+    font-size: 9px;
     opacity: 0.8;
 }
 
@@ -307,12 +319,12 @@ section:last-child {
 
 .generate-btn {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
     border: none;
     border-radius: 8px;
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -341,13 +353,13 @@ section:last-child {
 /* Loading */
 .loading {
     text-align: center;
-    padding: 24px;
+    padding: 20px;
     color: #667eea;
 }
 
 .loading i {
-    font-size: 18px;
-    margin-bottom: 8px;
+    font-size: 16px;
+    margin-bottom: 6px;
     display: block;
 }
 
@@ -361,7 +373,7 @@ section:last-child {
 
 .result-header {
     background: #e6fffa;
-    padding: 12px 16px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -375,7 +387,7 @@ section:last-child {
 .result-header span {
     flex: 1;
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
     color: #2d3748;
 }
 
@@ -386,13 +398,13 @@ section:last-child {
 }
 
 .action-btn {
-    padding: 6px 8px;
+    padding: 5px 7px;
     background: transparent;
     border: 1px solid #b2f5ea;
     border-radius: 4px;
     color: #38a169;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     transition: all 0.2s ease;
     white-space: nowrap;
 }
@@ -406,24 +418,26 @@ section:last-child {
 }
 
 .reference-output {
-    padding: 16px;
+    padding: 12px 14px;
     font-family: 'Courier New', monospace;
-    font-size: 12px;
-    line-height: 1.6;
+    font-size: 11px;
+    line-height: 1.5;
     color: #2d3748;
     background: white;
     word-wrap: break-word;
+    max-height: 120px;
+    overflow-y: auto;
 }
 
 .export-info {
-    padding: 8px 16px;
+    padding: 6px 14px;
     background: #f0f9ff;
     border-top: 1px solid #bae6fd;
-    font-size: 11px;
+    font-size: 10px;
     color: #0369a1;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .export-info i {
@@ -437,13 +451,13 @@ section:last-child {
     transform: translate(-50%, -50%);
     background: #38a169;
     color: white;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -453,9 +467,9 @@ section:last-child {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
     color: #4a5568;
 }
 
@@ -465,13 +479,13 @@ section:last-child {
 
 .clear-btn {
     margin-left: auto;
-    padding: 4px 6px;
+    padding: 3px 5px;
     background: transparent;
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     color: #a0aec0;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     transition: all 0.2s ease;
 }
 
@@ -482,19 +496,19 @@ section:last-child {
 }
 
 .history-list {
-    max-height: 120px;
+    max-height: 100px;
     overflow-y: auto;
 }
 
 .history-item {
-    padding: 8px 12px;
+    padding: 6px 10px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .history-item:hover {
@@ -508,31 +522,31 @@ section:last-child {
 
 .history-meta {
     color: #718096;
-    font-size: 10px;
-    margin-bottom: 4px;
+    font-size: 9px;
+    margin-bottom: 3px;
 }
 
 .history-reference {
     color: #2d3748;
     font-family: 'Courier New', monospace;
-    line-height: 1.4;
+    line-height: 1.3;
     word-wrap: break-word;
 }
 
 .empty-history {
     text-align: center;
-    padding: 24px;
+    padding: 16px;
     color: #a0aec0;
 }
 
 .empty-history i {
-    font-size: 24px;
-    margin-bottom: 8px;
+    font-size: 20px;
+    margin-bottom: 6px;
     display: block;
 }
 
 .empty-history p {
-    font-size: 12px;
+    font-size: 11px;
     margin: 0;
 }
 
@@ -545,7 +559,7 @@ section:last-child {
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -557,10 +571,14 @@ section:last-child {
     animation: fadeIn 0.3s ease;
 }
 
-/* Responsividade */
-@media (max-width: 380px) {
-    .container {
+/* Otimizações para popup de extensão */
+@media (max-width: 420px) {
+    html, body {
         width: 100vw;
+    }
+    
+    .container {
+        width: 100%;
         border-radius: 0;
     }
     
@@ -575,13 +593,12 @@ section:last-child {
     .form-group.half {
         flex: 1;
     }
-    
-    .result-actions {
-        flex-wrap: wrap;
-    }
-    
-    .action-btn {
-        font-size: 10px;
-        padding: 4px 6px;
-    }
+}
+
+/* Fix para Chrome Extension Popup */
+body {
+    width: 400px !important;
+    height: auto !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
 }
