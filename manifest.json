@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gerador Automático de Referências Acadêmicas",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Gera referências acadêmicas automáticas em formatos ABNT, APA, Vancouver, Chicago e outros. Nenhum dado é enviado para servidores.",
   "permissions": [
     "activeTab",
@@ -26,5 +26,8 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }
