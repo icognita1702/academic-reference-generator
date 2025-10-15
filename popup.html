@@ -2,16 +2,43 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Fix para popup de extensão: largura fixa e escala correta -->
+    <!-- Viewport fixa para popup: impede faixa estreita -->
     <meta name="viewport" content="width=400, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Gerador de Referências</title>
+
+    <!-- CSS crítico inline para isolar o popup -->
     <style>
-      /* Garantir 400px no root antes do CSS externo */
-      html, body { width: 400px; max-width: 400px; overflow-x: hidden; }
+      html, body {
+        width: 400px !important;
+        min-width: 400px !important;
+        max-width: 400px !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+        background: transparent !important;
+      }
+      .container {
+        width: 400px !important;
+        min-width: 400px !important;
+        max-width: 400px !important;
+      }
+      * { box-sizing: border-box; max-width: 100% !important; }
     </style>
+
     <link rel="stylesheet" href="styles/popup.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Sanity check de largura para corrigir pós-render -->
+    <script>
+      (function enforceWidth(){
+        const W=400;function fix(){try{const r=document.documentElement,b=document.body;const cur=Math.max(r.clientWidth,b?b.clientWidth:0);if(cur<W){r.style.width=W+'px';r.style.minWidth=W+'px';if(b){b.style.width=W+'px';b.style.minWidth=W+'px';b.style.overflowX='hidden';}}}catch(e){}}
+        document.addEventListener('readystatechange',fix);
+        window.addEventListener('load',fix,{once:true});
+        setTimeout(fix,0);setTimeout(fix,50);setTimeout(fix,150);
+      })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -47,7 +74,7 @@
                 </div>
             </div>
         </section>
-        
+
         <!-- Formulário de entrada manual -->
         <section class="manual-input">
             <div class="input-toggle">
