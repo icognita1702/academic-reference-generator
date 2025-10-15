@@ -1,4 +1,5 @@
 // Injeta utilitários na página para enriquecer metadados (ex: DOI)
+// Segurança: sem requisições de rede, sem coleta de dados sensíveis, apenas leitura do DOM.
 (() => {
   const extractors = {
     doi() {
