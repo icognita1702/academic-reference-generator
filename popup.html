@@ -2,8 +2,13 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Fix para popup de extensão: largura fixa e escala correta -->
+    <meta name="viewport" content="width=400, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Gerador de Referências</title>
+    <style>
+      /* Garantir 400px no root antes do CSS externo */
+      html, body { width: 400px; max-width: 400px; overflow-x: hidden; }
+    </style>
     <link rel="stylesheet" href="styles/popup.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -42,7 +47,7 @@
                 </div>
             </div>
         </section>
-
+        
         <!-- Formulário de entrada manual -->
         <section class="manual-input">
             <div class="input-toggle">
