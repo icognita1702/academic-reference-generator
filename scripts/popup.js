@@ -48,6 +48,58 @@ const FORMATS = {
   }
 };
 
+// Exportadores BibTeX e RIS
+const EXPORTERS = {
+  bibtex: {
+    name: 'BibTeX',
+    extension: 'bib',
+    format: ({ authors, title, site, year, url }) => {
+      const authorsClean = authors ? formatAuthorsBibTeX(authors) : 'Author, A.';
+      const titleClean = title.replace(/[{}]/g, '');
+      const siteClean = site.replace(/[^a-zA-Z0-9]/g, '');
+      const key = `${siteClean}${year}`;
+      
+      return `@misc{${key},
+  author = {${authorsClean}},
+  title = {{${titleClean}}},
+  howpublished = {\\url{${url}}},
+  year = {${year}},
+  note = {Acessado em ${formatAccessDate(new Date())}}
+}`;
+    }
+  },
+  ris: {
+    name: 'RIS',
+    extension: 'ris',
+    format: ({ authors, title, site, year, url }) => {
+      const authorsRIS = authors ? formatAuthorsRIS(authors) : 'Author, A.';
+      
+      return `TY  - ELEC
+TI  - ${title}
+AU  - ${authorsRIS}
+PY  - ${year}
+UR  - ${url}
+PB  - ${site}
+ER  - `;
+    }
+  }
+};
+
+function formatAuthorsBibTeX(authors) {
+  if (!authors) return 'Author, A.';
+  return authors.split(/;|,\s?e\s?| and /i)
+    .map(a => a.trim())
+    .filter(Boolean)
+    .join(' and ');
+}
+
+function formatAuthorsRIS(authors) {
+  if (!authors) return 'Author, A.';
+  return authors.split(/;|,\s?e\s?| and /i)
+    .map(a => a.trim())
+    .filter(Boolean)[0]; // RIS usa apenas o primeiro autor por linha AU
+}
+
 function formatAuthorsABNT(authors) {
   if (!authors) return 'SOBRENOME, Nome';
   return authors.split(/;|,\s?e\s?| and /i).map(a => a.trim()).filter(Boolean).map(p => {
@@ -124,6 +176,16 @@ function capitalize(s = '') { return s ? s[0].toUpperCase() + s.slice(1).toLower
 function buildReference(data, formatKey) {
   const formatter = FORMATS[formatKey]?.format || FORMATS.abnt.format;
   return formatter(data);
+}
+
+function exportReference(data, exportKey) {
+  const exporter = EXPORTERS[exportKey];
+  if (!exporter) return null;
+  return {
+    content: exporter.format(data),
+    extension: exporter.extension,
+    name: exporter.name
+  };
 }
 
 function saveHistory(item) {
@@ -240,6 +302,9 @@ async function onGenerate() {
   q('#resultDiv').classList.remove('hidden');
   q('#loadingDiv').classList.add('hidden');
 
+  // Salva dados para exportação
+  window._lastGeneratedData = data;
+
   saveHistory({
     format: FORMATS[formatKey].name,
     text: reference,
@@ -260,11 +325,31 @@ function onCopy() {
 function onDownload() {
   const text = q('#referenceOutput').textContent;
   if (!text) return;
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  downloadFile(text, 'referencia.txt', 'text/plain;charset=utf-8');
+}
+
+function onExportBibTeX() {
+  if (!window._lastGeneratedData) return;
+  const exported = exportReference(window._lastGeneratedData, 'bibtex');
+  if (exported) {
+    downloadFile(exported.content, `referencia.${exported.extension}`, 'text/plain;charset=utf-8');
+  }
+}
+
+function onExportRIS() {
+  if (!window._lastGeneratedData) return;
+  const exported = exportReference(window._lastGeneratedData, 'ris');
+  if (exported) {
+    downloadFile(exported.content, `referencia.${exported.extension}`, 'text/plain;charset=utf-8');
+  }
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'referencia.txt';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -280,12 +365,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const meta = await getPageMetadata();
   setPageInfoUI(meta);
 
-  // Botões
+  // Botões principais
   q('#toggleManual').addEventListener('click', toggleManualForm);
   q('#generateBtn').addEventListener('click', onGenerate);
   q('#copyBtn').addEventListener('click', onCopy);
   q('#downloadBtn').addEventListener('click', onDownload);
   q('#clearHistoryBtn').addEventListener('click', onClearHistory);
+
+  // Botões de exportação (se existirem)
+  const bibBtn = q('#exportBibTeXBtn');
+  const risBtn = q('#exportRISBtn');
+  if (bibBtn) bibBtn.addEventListener('click', onExportBibTeX);
+  if (risBtn) risBtn.addEventListener('click', onExportRIS);
 
   // Alternância de formato
   qa('.format-btn').forEach(btn => btn.addEventListener('click', () => setActiveFormat(btn)));
