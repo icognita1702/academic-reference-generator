@@ -1,0 +1,16 @@
+/* Aviso para sites bloqueados e melhorias de visibilidade */
+.blocked-notice .notice {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed #cbd5e0;
+  background: #fffaf0;
+  color: #744210;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.blocked-notice .notice i {
+  color: #d69e2e;
+}
