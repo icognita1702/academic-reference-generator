@@ -1,21 +1,39 @@
-// Background da extensão: manipula contexto e regras de geração
-// Observação: este arquivo NÃO coleta dados sensíveis, NÃO envia rede e NÃO executa downloads.
-// Ele apenas atende a mensagens do popup para ler metadados básicos da aba ativa.
+// Background da extensão: coleta segura de metadados
+// Sem rede/downloads. Apenas título/URL/seleção da aba ativa.
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[ARG] Extensão instalada');
+  console.log('[ARG] Instalada');
 });
 
-// Usa declarativeNetRequest? Não. Sem rede. Sem alarms. Sem downloads. Somente scripting controlado.
+// Verifica se a aba é elegível para scripting (bloqueia chrome://, edge://, etc.)
+function isEligibleTab(tab) {
+  try {
+    if (!tab?.url) return false;
+    const u = new URL(tab.url);
+    const blocked = ['chrome:', 'edge:', 'about:', 'moz-extension:', 'chrome-extension:'];
+    return !blocked.includes(u.protocol);
+  } catch {
+    return false;
+  }
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === 'GET_PAGE_METADATA') {
+  if (message?.type === 'GET_PAGE_METADATA_SAFE') {
     (async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab?.id) return sendResponse({ ok: false, error: 'NO_ACTIVE_TAB' });
+        if (!tab?.id) return sendResponse({ ok: false, reason: 'NO_TAB' });
 
-        // Executa script de leitura segura (somente título/URL/seleção de texto)
+        const eligible = isEligibleTab(tab);
+        if (!eligible) {
+          // Fallback mínimo: só título do tab e URL se disponível
+          return sendResponse({ ok: true, data: {
+            title: tab.title || 'Sem título',
+            url: '',
+            selection: ''
+          }, eligible: false });
+        }
+
         const [{ result } = {}] = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: () => ({
@@ -25,12 +43,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           })
         });
 
-        sendResponse({ ok: true, data: result || {} });
+        sendResponse({ ok: true, data: result || {}, eligible: true });
       } catch (e) {
-        console.error('[ARG] metadata error', e);
         sendResponse({ ok: false, error: String(e) });
       }
     })();
-    return true; // mantém canal assíncrono aberto
+    return true;
   }
 });
