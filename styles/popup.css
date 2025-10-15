@@ -56,7 +56,34 @@ section { padding: 18px 20px; border-top: 1px solid var(--border); }
 .result-actions { display: flex; gap: 8px; }
 .action-btn { padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; transition: .18s ease; }
 .action-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-.reference-output { background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; min-height: 96px; line-height: 1.7; }
+/* CORREÇÃO: Estilos aprimorados para exibição de referência formatada */
+.reference-output { 
+  background: #f8fafc; 
+  border: 1.5px solid var(--border); 
+  border-radius: 12px; 
+  padding: 14px; 
+  min-height: 96px; 
+  line-height: 1.7;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+/* Garantir que elementos HTML dentro da referência sejam exibidos corretamente */
+.reference-output em,
+.reference-output i { 
+  font-style: italic; 
+}
+.reference-output strong,
+.reference-output b { 
+  font-weight: 700; 
+}
+.reference-output a { 
+  color: var(--primary); 
+  text-decoration: underline;
+  word-break: break-all;
+}
+.reference-output a:hover { 
+  color: var(--primary-2); 
+}
 .export-info { color: var(--muted); }
 .copy-notification { position: sticky; bottom: 0; justify-self: end; background: #10b981; color: #fff; border-radius: 999px; padding: 6px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
 /* History */
@@ -65,5 +92,83 @@ section { padding: 18px 20px; border-top: 1px solid var(--border); }
 .clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
 .history-list { display: grid; gap: 10px; max-height: 180px; overflow: auto; }
 .empty-history { text-align: center; color: var(--muted); padding: 14px; border: 1.5px dashed #e5e7eb; border-radius: 10px; }
+/* CORREÇÃO: Estilos aprimorados para itens de histórico */
+.history-item { 
+  background: #fff; 
+  border: 1.5px solid var(--border); 
+  border-radius: 10px; 
+  padding: 12px; 
+  display: grid; 
+  gap: 10px;
+  transition: .18s ease;
+}
+.history-item:hover { 
+  border-color: #cbd5e1; 
+  box-shadow: 0 2px 8px rgba(15,23,42,.08); 
+}
+.history-header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 8px;
+}
+.history-format { 
+  display: inline-block;
+  background: var(--primary); 
+  color: #fff; 
+  padding: 4px 10px; 
+  border-radius: 6px; 
+  font-size: 11px; 
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.history-timestamp { 
+  font-size: 11px; 
+  color: var(--muted); 
+}
+/* CORREÇÃO: Exibir referência completa e formatada no histórico */
+.history-reference { 
+  font-size: 13px; 
+  line-height: 1.6; 
+  color: var(--text);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.history-reference em,
+.history-reference i { 
+  font-style: italic; 
+}
+.history-reference strong,
+.history-reference b { 
+  font-weight: 700; 
+}
+.history-reference a { 
+  color: var(--primary); 
+  text-decoration: underline;
+  word-break: break-all;
+}
+/* CORREÇÃO: Botão de cópia visível no histórico */
+.history-copy-btn { 
+  padding: 8px 12px; 
+  border-radius: 8px; 
+  border: 1.5px solid var(--border); 
+  background: #fff; 
+  cursor: pointer; 
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: .18s ease;
+  width: fit-content;
+  justify-self: end;
+}
+.history-copy-btn:hover { 
+  background: var(--primary); 
+  border-color: var(--primary);
+  color: #fff;
+}
 /* Utilities */
 .hidden { display: none !important; }
